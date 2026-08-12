@@ -1,0 +1,12 @@
+{
+  "name": "Liquid Reveal — Qazi Farhan Ahmad",
+  "short_name": "Liquid Reveal",
+  "description": "An interactive WebGL liquid-reveal hero driven by a real 2D wave equation.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

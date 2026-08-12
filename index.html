@@ -3,14 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Liquid reveal</title>
-<meta name="description" content="Interactive liquid reveal hero. A real 2D wave-equation height field refracts the image and reveals a dark-bronze layer.">
+<title>Qazi Farhan Ahmad — Liquid Reveal</title>
+<meta name="description" content="An interactive WebGL liquid-reveal hero by Qazi Farhan Ahmad. A real 2D wave-equation height field runs on the GPU, refracting an image and revealing a dark-bronze layer.">
+<meta name="author" content="Qazi Farhan Ahmad">
+<meta name="theme-color" content="#000000">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://github.com/Qaziaaaa/liquid-reveal">
+<meta property="og:title" content="Qazi Farhan Ahmad — Liquid Reveal">
+<meta property="og:description" content="An interactive WebGL liquid-reveal hero driven by a real 2D wave equation.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Qazi Farhan Ahmad — Liquid Reveal">
+<meta name="twitter:description" content="An interactive WebGL liquid-reveal hero driven by a real 2D wave equation.">
+
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'">
 <style>
   :root{
     --ink:#ffffff;
     --dim:rgba(255,255,255,.62);
   }
   *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:env(safe-area-inset-top)}
   html,body{height:100%;background:#000;color:var(--ink);}
   body{
     font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
