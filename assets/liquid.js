@@ -77,6 +77,7 @@ const P = {
                           // regardless of radius, so this grows the reveal
                           // DIAMETER without brightening the core.
   impulseFallSq : 3.0,    // exp(-d^2 * this). 3.0 -> 5% at d = radius
+  splashAmp     : 0.55,   // tap-to-splash one-shot monopole amplitude
 
   /* ======================================================================
      VISUALS DRIVEN BY THE HEIGHT FIELD
@@ -892,14 +893,22 @@ const ptr = {
 };
 let interacted = false;
 
-/* one-shot impulse queued by tests / reduced-motion */
+/* one-shot impulse queued by tests / reduced-motion / tap-to-splash */
 let pending = null;
 
-function onPointer(e){
+/* every live pointer, keyed by pointerId. A pointer is tracked while it
+   hovers (mouse) or stays on screen (touch), so two fingers push the same
+   wave field and interfere exactly like real ripples. */
+const pointers = new Map();
+function track(e){
   if (!ptr.accept) return;
   const r = hero.getBoundingClientRect();
-  ptr.x = (e.clientX - r.left) / r.width;
-  ptr.y = 1.0 - (e.clientY - r.top) / r.height;   /* flip into GL space */
+  const x = (e.clientX - r.left) / r.width;
+  const y = 1.0 - (e.clientY - r.top) / r.height;   /* flip into GL space */
+  const p = pointers.get(e.pointerId) || { x, y, px: x, py: y };
+  p.x = x; p.y = y;
+  pointers.set(e.pointerId, p);
+  ptr.x = x; ptr.y = y;
   ptr.has = true;
   ptr.lastInput = performance.now();
   if (!interacted){
@@ -907,9 +916,24 @@ function onPointer(e){
     if (hintEl) hintEl.classList.add('gone');
   }
 }
-hero.addEventListener('pointermove', onPointer, { passive: true });
-hero.addEventListener('pointerdown', onPointer, { passive: true });
-hero.addEventListener('pointerleave', () => { ptr.has = false; }, { passive: true });
+function onPointerDown(e){
+  track(e);
+  /* a tap is a one-shot monopole splash, bigger than a glide dab */
+  pending = { x: ptr.x, y: ptr.y, amp: P.splashAmp * (W < H ? P.narrowScale : 1) };
+  needsDraw = true;
+}
+function onPointerUp(e){
+  if (e.pointerType !== 'mouse') pointers.delete(e.pointerId);
+  if (pointers.size === 0) ptr.has = false;
+}
+hero.addEventListener('pointermove', track, { passive: true });
+hero.addEventListener('pointerdown', onPointerDown, { passive: true });
+hero.addEventListener('pointerup', onPointerUp, { passive: true });
+hero.addEventListener('pointercancel', onPointerUp, { passive: true });
+hero.addEventListener('pointerleave', (e) => {
+  pointers.delete(e.pointerId);
+  ptr.has = false;
+}, { passive: true });
 
 /* ==========================================================================
    Sizing
@@ -996,11 +1020,13 @@ const SIM_DT = 1 / P.simHz;
 let lastDropAt = -1e9, dropSeed = 0;
 
 function stepSim(now, dt){
-  /* idle drift generates a virtual pointer once input goes quiet */
+  /* idle drift generates a virtual pointer once every real pointer is
+     quiet (no movement, no live touch) for idleDelayMs */
   const idleFor = now - ptr.lastInput;
+  const anyActive = ptr.accept && pointers.size > 0;
   let idling = false;
   const idleScale = (W < H) ? P.narrowScale : 1.0;
-  if (P.idleDrift && !REDUCED && (!ptr.has || idleFor > P.idleDelayMs)){
+  if (P.idleDrift && !REDUCED && (!anyActive || idleFor > P.idleDelayMs)){
     idling = true;
     const tt = (now - t0) / 1000 * P.idleSpeed;
     ptr.x = P.idleCenter[0] + Math.cos(tt * 1.00) * P.idleRadius[0]
@@ -1023,17 +1049,24 @@ function stepSim(now, dt){
     }
   }
 
-  /* pointer speed in uv/second, aspect corrected so vertical and horizontal
-     flicks inject the same amount */
+  /* one stroke per live pointer (plus the idle virtual pointer), each with
+     an amplitude proportional to its OWN pointer speed in uv/second, aspect
+     corrected so vertical and horizontal flicks inject the same amount */
   const asp = W / H;
-  const dx = (ptr.x - ptr.px) * asp, dy = ptr.y - ptr.py;
-  const speed = Math.hypot(dx, dy) / Math.max(dt, 1e-4);
-  let amp = 0;
-  if (speed > P.impulseMinSpeed){
-    amp = Math.min(P.impulseBase + speed * P.impulseGain, P.impulseMax);
-    if (idling) amp *= P.idleBoost;
-    amp *= idleScale;
-  }
+  const strokes = [];
+  const pushStroke = (p) => {
+    const dx = (p.x - p.px) * asp, dy = p.y - p.py;
+    const speed = Math.hypot(dx, dy) / Math.max(dt, 1e-4);
+    let amp = 0;
+    if (speed > P.impulseMinSpeed){
+      amp = Math.min(P.impulseBase + speed * P.impulseGain, P.impulseMax);
+      if (idling) amp *= P.idleBoost;
+      amp *= idleScale;
+    }
+    strokes.push({ px: p.px, py: p.py, x: p.x, y: p.y, amp });
+  };
+  if (idling) pushStroke(ptr);
+  else if (ptr.accept) for (const p of pointers.values()) pushStroke(p);
 
   acc += dt;
   let n = Math.floor(acc / SIM_DT);
@@ -1042,29 +1075,30 @@ function stepSim(now, dt){
 
   if (n === 0 && !pending) return false;
 
-  /* the pointer path is split across the substeps so a fast flick leaves a
-     continuous wake instead of a dotted line */
+  /* every pointer path is split across the substeps so a fast flick leaves
+     a continuous wake instead of a dotted line */
   const steps = Math.max(n, pending ? 1 : 0);
+  let maxAmp = 0;
   for (let k = 0; k < steps; k++){
-    const a = k / steps, b = (k + 1) / steps;
-    let ax = ptr.px + (ptr.x - ptr.px) * a;
-    let ay = ptr.py + (ptr.y - ptr.py) * a;
-    let bx = ptr.px + (ptr.x - ptr.px) * b;
-    let by = ptr.py + (ptr.y - ptr.py) * b;
-    let A = amp, dipole = true;
     if (pending && k === 0){
-      ax = bx = pending.x; ay = by = pending.y; A = pending.amp;
-      dipole = false;                 /* a droplet is a monopole */
-      pending = null;
-      energy = Math.max(energy, A);
+      simStep(pending.x, pending.y, pending.x, pending.y, pending.amp, false);
+      maxAmp = Math.max(maxAmp, pending.amp);
+      pending = null;             /* a splash is a monopole */
     }
-    simStep(ax, ay, bx, by, A, dipole);
+    for (const s of strokes){
+      const a = k / steps, b = (k + 1) / steps;
+      simStep(s.px + (s.x - s.px) * a, s.py + (s.y - s.py) * a,
+              s.px + (s.x - s.px) * b, s.py + (s.y - s.py) * b,
+              s.amp, true);
+      maxAmp = Math.max(maxAmp, s.amp);
+    }
   }
 
-  if (amp > 0) energy = Math.max(energy, amp);
+  if (maxAmp > 0) energy = Math.max(energy, maxAmp);
   else energy *= Math.pow(P.damping, steps);
 
-  ptr.px = ptr.x; ptr.py = ptr.y;
+  if (idling){ ptr.px = ptr.x; ptr.py = ptr.y; }
+  else for (const p of pointers.values()){ p.px = p.x; p.py = p.y; }
   return true;
 }
 
@@ -1339,6 +1373,7 @@ window.__ripple = {
     ptr.has = false;
     ptr.px = ptr.x; ptr.py = ptr.y;
     ptr.lastInput = -1e9;
+    pointers.clear();
   },
   setPointer(nx, ny){
     ptr.x = nx; ptr.y = ny; ptr.has = true; ptr.lastInput = performance.now();
