@@ -212,6 +212,36 @@ document.documentElement.classList.add('js');
 
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/* ==========================================================================
+   URL customization
+   Every content value and asset can be overridden from the query string,
+   which turns this hero into a reusable template:
+     ?name=…&tag=…&title=…&src=img.png&chrome=img.png&imgw=1672&imgh=941
+   ========================================================================== */
+const DEFAULT_BASE   = P.BASE_SRC;
+const DEFAULT_CHROME = P.CHROME_SRC;
+function urlParam(key, fallback, coerce){
+  const v = qs.get(key);
+  if (v == null || v === '') return fallback;
+  return coerce ? coerce(v) : v;
+}
+const nameEl = document.getElementById('wordmarkName');
+const tagEl  = document.getElementById('tagline');
+
+P.BASE_SRC   = urlParam('src',    P.BASE_SRC);
+P.CHROME_SRC = urlParam('chrome', P.CHROME_SRC);
+P.IMG_W      = urlParam('imgw',   P.IMG_W, Number);
+P.IMG_H      = urlParam('imgh',   P.IMG_H, Number);
+P.imgFocus   = [ urlParam('focusx', P.imgFocus[0], Number),
+                 urlParam('focusy', P.imgFocus[1], Number) ];
+
+const customName  = urlParam('name',  null);
+const customTag   = urlParam('tag',   null);
+const customTitle = urlParam('title', null);
+if (customName  && nameEl) nameEl.textContent = customName;
+if (customTag   && tagEl)  tagEl.textContent  = customTag;
+if (customTitle) document.title = customTitle;
+
 window.__rippleErrors = [];
 
 function bail(reason){
@@ -844,21 +874,28 @@ function makeImageTexture(){
 const texBase   = makeImageTexture();
 const texChrome = makeImageTexture();
 
-function loadImage(src, tex){
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.decoding = 'async';
-    img.onload = () => {
-      try{
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      }catch(e){ reject(e); return; }
-      resolve(img);
+function loadImage(src, tex, fallback){
+  return new Promise((resolve) => {
+    const attempt = (s) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.crossOrigin = 'anonymous';        /* allow cross-origin textures */
+      img.onload = () => {
+        try{
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        }catch(e){ resolve(null); return; }
+        resolve(img);
+      };
+      img.onerror = () => {
+        if (fallback && s !== fallback) attempt(fallback);
+        else resolve(null);
+      };
+      img.src = s;
     };
-    img.onerror = () => reject(new Error('image failed to load: ' + src));
-    img.src = src;
+    attempt(src);
   });
 }
 
@@ -1475,9 +1512,13 @@ if (window.IntersectionObserver && !REDUCED){
    Go
    ========================================================================== */
 Promise.all([
-  loadImage(P.BASE_SRC, texBase),
-  loadImage(P.CHROME_SRC, texChrome)
-]).then(() => {
+  loadImage(P.BASE_SRC, texBase, DEFAULT_BASE),
+  loadImage(P.CHROME_SRC, texChrome, DEFAULT_CHROME)
+]).then(([baseImg, chromeImg]) => {
+  if (!baseImg && !chromeImg){
+    bail('images failed to load');
+    return;
+  }
   if (DEBUG) dbgEl.classList.add('on');
   resize();
   if (!running) return;
