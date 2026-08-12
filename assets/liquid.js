@@ -1509,6 +1509,69 @@ if (window.IntersectionObserver && !REDUCED){
 }
 
 /* ==========================================================================
+   Debug: live parameter editor (?debug=1)
+   Every scalar worth tuning while it runs, edited in place. Changes re-derive
+   the derived constants and mark the next frame dirty.
+   ========================================================================== */
+const EDITABLE = [
+  { k:'damping',       label:'damping',       min:0.80, max:0.995, step:0.001 },
+  { k:'viscosity',     label:'viscosity',     min:0.00, max:0.200, step:0.001 },
+  { k:'refraction',    label:'refraction',    min:0.00, max:0.400, step:0.001 },
+  { k:'chromatic',     label:'chromatic',     min:0.00, max:0.200, step:0.001 },
+  { k:'specStrength',  label:'spec strength', min:0.00, max:1.000, step:0.010 },
+  { k:'bloom',         label:'bloom',         min:0.00, max:1.000, step:0.010 },
+  { k:'vignette',      label:'vignette',      min:0.00, max:1.000, step:0.010 },
+  { k:'grain',         label:'grain',         min:0.00, max:0.200, step:0.001 },
+  { k:'scanlines',     label:'scanlines',     min:0.00, max:0.100, step:0.001 },
+  { k:'impulseBase',   label:'impulse base',  min:0.00, max:0.400, step:0.005 },
+  { k:'impulseGain',   label:'impulse gain',  min:0.00, max:0.300, step:0.005 },
+  { k:'impulseRadius', label:'impulse radius',min:0.02, max:0.500, step:0.010 },
+  { k:'splashAmp',     label:'splash amp',    min:0.10, max:1.000, step:0.050 },
+  { k:'maskLo',        label:'mask lo',       min:0.00, max:0.500, step:0.005 },
+  { k:'maskHi',        label:'mask hi',       min:0.00, max:0.500, step:0.005 },
+  { k:'edgeGlow',      label:'edge glow',     min:0.00, max:0.600, step:0.010 },
+  { k:'gradPhase',     label:'grad phase',    min:0,     max:100,   step:1 },
+  { k:'gradScale',     label:'grad scale',    min:0,     max:100,   step:1 },
+  { k:'gradMix',       label:'grad mix',      min:0,     max:100,   step:1 },
+  { k:'idleSpeed',     label:'idle speed',    min:0.00, max:3.000, step:0.050 },
+  { k:'idleDropAmp',   label:'idle drops',    min:0.00, max:0.500, step:0.010 },
+  { k:'waveC',         label:'wave C',        min:0.05, max:0.700, step:0.010 }
+];
+if (DEBUG){
+  const panel = document.createElement('div');
+  panel.id = 'dbgParams';
+  const title = document.createElement('div');
+  title.className = 'dbg-title';
+  title.textContent = 'tune P — live';
+  panel.appendChild(title);
+  for (const it of EDITABLE){
+    const row = document.createElement('label');
+    row.className = 'dbg-row';
+    const name = document.createElement('span');
+    name.textContent = it.label;
+    const range = document.createElement('input');
+    range.type = 'range';
+    range.min = it.min; range.max = it.max; range.step = it.step;
+    range.value = P[it.k];
+    const out = document.createElement('output');
+    out.textContent = (+P[it.k]).toFixed(3);
+    range.addEventListener('input', () => {
+      P[it.k] = parseFloat(range.value);
+      out.textContent = (+P[it.k]).toFixed(3);
+      derive(); needsDraw = true;
+    });
+    row.appendChild(name); row.appendChild(range); row.appendChild(out);
+    panel.appendChild(row);
+  }
+  const btn = document.createElement('button');
+  btn.className = 'dbg-btn';
+  btn.textContent = 'export png';
+  btn.addEventListener('click', exportFrame);
+  panel.appendChild(btn);
+  dbgEl.appendChild(panel);
+}
+
+/* ==========================================================================
    Go
    ========================================================================== */
 Promise.all([

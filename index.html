@@ -235,6 +235,32 @@
     padding:6px 9px;
     white-space:pre;
   }
+  #dbgParams{
+    background:rgba(0,0,0,.78);
+    border:1px solid rgba(157,200,230,.28);
+    padding:10px 12px;
+    width:236px;
+    max-height:340px;
+    overflow:auto;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  #dbgParams .dbg-title{
+    color:#9dc8e6;letter-spacing:.12em;text-transform:uppercase;
+    font-size:10px;margin-bottom:2px;
+  }
+  #dbgParams .dbg-row{
+    display:grid;grid-template-columns:74px 1fr 42px;align-items:center;gap:8px;
+    font-size:10px;
+  }
+  #dbgParams .dbg-row span{color:rgba(255,255,255,.8)}
+  #dbgParams .dbg-row output{text-align:right;color:#9dc8e6}
+  #dbgParams input[type=range]{width:100%;accent-color:#9dc8e6;height:14px}
+  #dbgParams .dbg-btn{
+    margin-top:6px;background:transparent;border:1px solid rgba(157,200,230,.45);
+    color:#9dc8e6;font:inherit;padding:4px 8px;cursor:pointer;
+    text-transform:uppercase;letter-spacing:.1em;
+  }
+  #dbgParams .dbg-btn:hover{background:rgba(157,200,230,.12)}
 
   @media (prefers-reduced-motion: reduce){
     .hint{display:none}
