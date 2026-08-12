@@ -1508,6 +1508,13 @@ if (window.IntersectionObserver && !REDUCED){
   secs.forEach(s => io.observe(s));
 }
 
+/* register the service worker so the page works offline after first visit */
+if ('serviceWorker' in navigator && location.protocol !== 'file:'){
+  addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
 /* ==========================================================================
    Debug: live parameter editor (?debug=1)
    Every scalar worth tuning while it runs, edited in place. Changes re-derive
