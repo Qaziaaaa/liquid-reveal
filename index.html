@@ -113,6 +113,23 @@
     color:var(--dim);
     white-space:nowrap;
   }
+  .scroll a{color:inherit;text-decoration:none;transition:color .25s ease}
+  .scroll a:hover{color:#C98247}
+
+  #exportBtn{
+    position:absolute;right:clamp(18px,3.2vw,44px);bottom:clamp(18px,3.2vw,44px);
+    z-index:3;
+    width:38px;height:38px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(0,0,0,.35);color:rgba(255,255,255,.75);
+    font-size:15px;line-height:1;cursor:pointer;
+    backdrop-filter:blur(6px);
+    transition:border-color .25s ease,color .25s ease,opacity .4s ease;
+    opacity:0;pointer-events:none;
+  }
+  #exportBtn:hover{border-color:#C98247;color:#C98247}
+  #exportBtn.ready{opacity:1;pointer-events:auto}
+  #exportBtn:active{transform:scale(.94)}
 
   .hint{
     position:absolute;
@@ -243,11 +260,13 @@
 
     <div class="bottom">
       <p class="tagline" id="tagline">A real 2D wave equation running on the GPU — an interactive WebGL experiment by Qazi Farhan Ahmad.</p>
-      <div class="scroll">(Scroll)</div>
+      <div class="scroll"><a href="#effect">See what I built ↓</a></div>
     </div>
   </div>
 
   <div class="hint" id="hint">Move your cursor</div>
+
+  <button id="exportBtn" title="Export current frame as PNG" aria-label="Export current frame as PNG">⤓</button>
 
   <div id="dbg">
     <canvas id="dbgField" width="200" height="120"></canvas>

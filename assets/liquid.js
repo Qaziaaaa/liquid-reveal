@@ -202,9 +202,12 @@ const canvas   = document.getElementById('gl');
 const hero     = document.getElementById('hero');
 const fallback = document.getElementById('fallback');
 const hintEl   = document.getElementById('hint');
+const exportBtn = document.getElementById('exportBtn');
 const dbgEl    = document.getElementById('dbg');
 const dbgText  = document.getElementById('dbgText');
 const dbgField = document.getElementById('dbgField');
+
+document.documentElement.classList.add('js');
 
 const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -649,9 +652,9 @@ void main(){
    ========================================================================== */
 let gl = null, isGL2 = false;
 try{
-  const opts = { alpha:false, antialias:false, depth:false, stencil:false,
-                 premultipliedAlpha:false, powerPreference:'high-performance',
-                 preserveDrawingBuffer: DEBUG };
+   const opts = { alpha:false, antialias:false, depth:false, stencil:false,
+                  premultipliedAlpha:false, powerPreference:'high-performance',
+                  preserveDrawingBuffer: true };   /* kept so a frame can be exported to PNG anytime */
   gl = canvas.getContext('webgl2', opts);
   isGL2 = !!gl;
   if (!gl) gl = canvas.getContext('webgl', opts) || canvas.getContext('experimental-webgl', opts);
@@ -1403,8 +1406,35 @@ window.__ripple = {
     return { mean: [r/n, g/n, bl/n], max: maxc, n };
   },
 
-  applyParams(){ derive(); needsDraw = true; }
+  applyParams(){ derive(); needsDraw = true; },
+  exportFrame
 };
+
+/* ==========================================================================
+   Page affordances: frame export + content reveal
+   ========================================================================== */
+function exportFrame(){
+  if (!running) return;
+  const a = document.createElement('a');
+  a.download = 'liquid-frame.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+if (exportBtn){
+  exportBtn.classList.add('ready');
+  exportBtn.addEventListener('click', exportFrame);
+}
+
+/* fade the sections below the hero in as they scroll into view */
+if (window.IntersectionObserver && !REDUCED){
+  const secs = document.querySelectorAll('.section');
+  const io = new IntersectionObserver((entries) => {
+    for (const en of entries){
+      if (en.isIntersecting){ en.target.classList.add('on'); io.unobserve(en.target); }
+    }
+  }, { threshold: 0.15 });
+  secs.forEach(s => io.observe(s));
+}
 
 /* ==========================================================================
    Go
