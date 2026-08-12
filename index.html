@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Liquid reveal</title>
+<meta name="description" content="Interactive liquid reveal hero. A real 2D wave-equation height field refracts the image and reveals a dark-bronze layer.">
+<style>
+  :root{
+    --ink:#ffffff;
+    --dim:rgba(255,255,255,.62);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#000;color:var(--ink);}
+  body{
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+
+  .hero{
+    position:relative;
+    width:100%;
+    height:100vh;
+    height:100svh;
+    overflow:hidden;
+    background:#000;
+    isolation:isolate;
+    touch-action:none;            /* let pointermove drive the effect on touch */
+  }
+
+  /* ---- canvas sits at the bottom of the stack ---- */
+  #gl{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    display:block;
+    z-index:0;
+  }
+
+  /* ---- static fallback if WebGL or the images fail ---- */
+  #fallback{
+    position:absolute; inset:0;
+    z-index:1;
+    display:none;
+    background:
+      radial-gradient(120% 90% at 50% 40%, #3A2412 0%, #120B04 46%, #000 78%),
+      #000;
+  }
+  #fallback.on{display:block}
+  #fallback::after{
+    content:"";
+    position:absolute; inset:0;
+    background:radial-gradient(58% 42% at 50% 42%, rgba(201,130,71,.28), rgba(58,36,18,.18) 45%, transparent 72%);
+    filter:blur(18px);
+  }
+
+  /* ---- hero copy ---- */
+  .ui{
+    position:absolute; inset:0;
+    z-index:3;
+    pointer-events:none;
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding:clamp(18px,3.2vw,44px);
+    padding-top:max(clamp(18px,3.2vw,44px), env(safe-area-inset-top));
+    padding-bottom:max(clamp(18px,3.2vw,44px), env(safe-area-inset-bottom));
+  }
+  .ui a{pointer-events:auto}
+
+  .top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+  .wordmark{
+    font-size:clamp(26px,4.6vw,54px);
+    font-weight:700; letter-spacing:-.02em; line-height:1;
+    text-shadow:0 2px 40px rgba(0,0,0,.75);
+  }
+  .wordmark sup{font-size:.42em;vertical-align:super;font-weight:500}
+  /* Bronze accent dot, matching the chrome reveal theme. */
+  .wordmark .dot{color:#C98247}
+
+  nav{display:flex;gap:clamp(10px,1.6vw,22px);flex-wrap:wrap;padding-top:.45em}
+  nav a,.contact a{
+    color:var(--dim); text-decoration:none;
+    font-size:clamp(11px,1.05vw,13px);
+    transition:color .25s ease;
+  }
+  nav a:hover,.contact a:hover{color:#fff}
+  .contact{padding-top:.45em}
+
+  .bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+  .tagline{
+    max-width:34ch;
+    font-size:clamp(11px,1.05vw,13px);
+    line-height:1.45;
+    color:rgba(255,255,255,.86);
+    text-shadow:0 1px 24px rgba(0,0,0,.8);
+  }
+  .scroll{
+    font-size:clamp(11px,1.05vw,13px);
+    color:var(--dim);
+    white-space:nowrap;
+  }
+
+  .hint{
+    position:absolute;
+    left:50%; bottom:clamp(58px,9vh,104px);
+    transform:translateX(-50%);
+    z-index:3;
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:rgba(255,255,255,.42);
+    transition:opacity .5s ease;
+    text-align:center;
+    pointer-events:none;
+  }
+  .hint.gone{opacity:0}
+
+  /* ---- debug (?debug=1) ---- */
+  #dbg{
+    position:absolute; z-index:5; left:12px; bottom:12px;
+    display:none; gap:10px; align-items:flex-end;
+    font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:#9dc8e6;
+  }
+  #dbg.on{display:flex}
+  #dbgField{
+    width:200px;height:120px;
+    border:1px solid rgba(157,200,230,.45);
+    image-rendering:pixelated;
+    background:#000;
+  }
+  #dbgText{
+    background:rgba(0,0,0,.72);
+    border:1px solid rgba(157,200,230,.28);
+    padding:6px 9px;
+    white-space:pre;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .hint{display:none}
+  }
+</style>
+</head>
+<body>
+
+<section class="hero" id="hero">
+  <canvas id="gl"></canvas>
+  <div id="fallback"></div>
+
+  <div class="ui">
+    <div class="top">
+      <div class="wordmark">Cindy Zhu<span class="dot">.</span></div>
+      <nav>
+        <a href="#">Work</a><a href="#">Index</a><a href="#">About</a><a href="#">Blog</a>
+      </nav>
+      <div class="contact"><a href="#">Contact</a></div>
+    </div>
+
+    <div class="bottom">
+      <p class="tagline">A studio exploring the boundary between human intuition and engineered intelligence.</p>
+      <div class="scroll">(Scroll)</div>
+    </div>
+  </div>
+
+  <div class="hint" id="hint">Move your cursor</div>
+
+  <div id="dbg">
+    <canvas id="dbgField" width="200" height="120"></canvas>
+    <div id="dbgText">booting…</div>
+  </div>
+</section>
+
+<script src="assets/liquid.js" defer></script>
+</body>
+</html>
