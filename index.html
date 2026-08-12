@@ -127,6 +127,77 @@
   }
   .hint.gone{opacity:0}
 
+  /* ---- below-hero content ---- */
+  :focus-visible{outline:1px solid #C98247;outline-offset:3px;border-radius:2px}
+
+  #content{position:relative;z-index:4;background:#000}
+  .section{background:#000;border-top:1px solid rgba(255,255,255,.06)}
+  .section-inner{
+    max-width:1040px;margin:0 auto;
+    padding:clamp(72px,12vh,150px) clamp(22px,5vw,64px);
+  }
+  .kicker{
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:#C98247;margin-bottom:18px;
+  }
+  h2{
+    font-size:clamp(28px,4.6vw,52px);
+    font-weight:700;letter-spacing:-.02em;line-height:1.08;
+    max-width:18ch;margin-bottom:22px;
+  }
+  .section p{color:rgba(255,255,255,.78);line-height:1.65;font-size:clamp(14px,1.3vw,16px)}
+  .section .lede{color:#fff;font-size:clamp(16px,1.8vw,20px);line-height:1.55;max-width:52ch;margin-bottom:16px}
+  .section p+p{margin-top:14px}
+
+  .specs{
+    list-style:none;margin-top:44px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .specs li{background:#000;padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+  .spec-n{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.4)}
+  .spec-v{font-size:13px;color:rgba(255,255,255,.9)}
+
+  .grid{
+    margin-top:44px;display:grid;gap:14px;
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));
+  }
+  .card{
+    display:flex;flex-direction:column;gap:10px;
+    border:1px solid rgba(255,255,255,.1);
+    padding:24px 22px;text-decoration:none;color:#fff;
+    transition:border-color .25s ease,transform .25s ease,background .25s ease;
+  }
+  .card:hover{border-color:rgba(201,130,71,.7);transform:translateY(-3px);background:rgba(201,130,71,.05)}
+  .card-tag{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#C98247}
+  .card-title{font-size:18px;font-weight:600;letter-spacing:-.01em}
+  .card-desc{font-size:13px;line-height:1.55;color:rgba(255,255,255,.65);flex:1}
+  .card-link{font-size:12px;color:#C98247}
+
+  .links{display:flex;flex-wrap:wrap;gap:12px;margin-top:36px}
+  .pill{
+    border:1px solid rgba(255,255,255,.18);
+    padding:11px 22px;text-decoration:none;color:#fff;
+    font-size:13px;letter-spacing:.04em;
+    transition:border-color .25s ease,background .25s ease;
+  }
+  .pill:hover{border-color:#C98247;background:rgba(201,130,71,.08)}
+
+  footer{border-top:1px solid rgba(255,255,255,.06);background:#000}
+  .footer-inner{
+    max-width:1040px;margin:0 auto;
+    padding:34px clamp(22px,5vw,64px);
+    display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+    font-size:12px;color:rgba(255,255,255,.42);
+  }
+  .footer-inner a{color:rgba(255,255,255,.6);text-decoration:none}
+  .footer-inner a:hover{color:#C98247}
+
+  /* ---- scroll reveal (only when JS adds the .js class) ---- */
+  .js .section:not(.on){opacity:0;transform:translateY(16px)}
+  .section{transition:opacity .6s ease,transform .6s ease}
+
   /* ---- debug (?debug=1) ---- */
   #dbg{
     position:absolute; z-index:5; left:12px; bottom:12px;
@@ -150,6 +221,8 @@
 
   @media (prefers-reduced-motion: reduce){
     .hint{display:none}
+    .js .section:not(.on){opacity:1;transform:none}
+    .section{transition:none}
   }
 </style>
 </head>
@@ -161,15 +234,15 @@
 
   <div class="ui">
     <div class="top">
-      <div class="wordmark">Cindy Zhu<span class="dot">.</span></div>
+      <div class="wordmark"><span id="wordmarkName">Qazi Farhan</span><span class="dot">.</span></div>
       <nav>
-        <a href="#">Work</a><a href="#">Index</a><a href="#">About</a><a href="#">Blog</a>
+        <a href="#effect">The Effect</a><a href="#experiments">Experiments</a><a href="#contact">Contact</a>
       </nav>
-      <div class="contact"><a href="#">Contact</a></div>
+      <div class="contact"><a href="https://qaziahmad.vercel.app/" target="_blank" rel="noopener">Portfolio ↗</a></div>
     </div>
 
     <div class="bottom">
-      <p class="tagline">A studio exploring the boundary between human intuition and engineered intelligence.</p>
+      <p class="tagline" id="tagline">A real 2D wave equation running on the GPU — an interactive WebGL experiment by Qazi Farhan Ahmad.</p>
       <div class="scroll">(Scroll)</div>
     </div>
   </div>
@@ -181,6 +254,82 @@
     <div id="dbgText">booting…</div>
   </div>
 </section>
+
+<main id="content">
+
+  <section class="section" id="effect">
+    <div class="section-inner">
+      <p class="kicker">01 — the effect</p>
+      <h2>Water you can touch, without touching it.</h2>
+      <p class="lede">The hero is a real 2D wave-equation height field, not a painted trail. Two framebuffers are ping-ponged on the GPU while a damped wave equation integrates at a fixed 120&nbsp;Hz, so ripples propagate, interfere, and keep moving long after the cursor stops.</p>
+      <p>Everything you see is derived from that height field and its gradient: the refraction, the chromatic split along the wavefront, the specular glint, and the reveal mask that wipes the photo back. FBM noise only roughens the mask edge.</p>
+      <ul class="specs">
+        <li><span class="spec-n">Renderer</span><span class="spec-v">WebGL2, WebGL1 fallback</span></li>
+        <li><span class="spec-n">Sim grid</span><span class="spec-v">~288 cells on the long axis</span></li>
+        <li><span class="spec-n">Sim rate</span><span class="spec-v">120 Hz fixed, accumulator-driven</span></li>
+        <li><span class="spec-n">Dependencies</span><span class="spec-v">zero — one GLSL pipeline</span></li>
+        <li><span class="spec-n">Gesture</span><span class="spec-v">drag, tap to splash, multi-touch</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section" id="experiments">
+    <div class="section-inner">
+      <p class="kicker">02 — live experiments</p>
+      <h2>Built with the same care.</h2>
+      <p class="lede">A few other things I have in production — same obsession with the last five percent.</p>
+      <div class="grid">
+        <a class="card" href="https://mydocchat.vercel.app" target="_blank" rel="noopener">
+          <span class="card-tag">AI · MERN</span>
+          <span class="card-title">MyDocChat</span>
+          <span class="card-desc">RAG chatbot with streaming answers, powered by Groq LLaMA and Jina embeddings.</span>
+          <span class="card-link">visit ↗</span>
+        </a>
+        <a class="card" href="https://medical-ai-saas.vercel.app" target="_blank" rel="noopener">
+          <span class="card-tag">AI · SaaS</span>
+          <span class="card-title">Medical AI SaaS</span>
+          <span class="card-desc">Patient management, diagnostic assistance and analytics for clinicians.</span>
+          <span class="card-link">visit ↗</span>
+        </a>
+        <a class="card" href="https://studyflow-ai-three.vercel.app" target="_blank" rel="noopener">
+          <span class="card-tag">MERN</span>
+          <span class="card-title">StudyFlow AI</span>
+          <span class="card-desc">AI study productivity with smart scheduling and progress tracking.</span>
+          <span class="card-link">visit ↗</span>
+        </a>
+        <a class="card" href="https://aetherai-labs.vercel.app" target="_blank" rel="noopener">
+          <span class="card-tag">Next.js</span>
+          <span class="card-title">Aether AI</span>
+          <span class="card-desc">A Next.js 16 landing page with GSAP motion and celestial-modern design.</span>
+          <span class="card-link">visit ↗</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="contact">
+    <div class="section-inner">
+      <p class="kicker">03 — contact</p>
+      <h2>Built by Qazi Farhan Ahmad.</h2>
+      <p class="lede">AI web developer and MERN stack expert from Peshawar — open to internships, freelance and full-time work.</p>
+      <div class="links">
+        <a class="pill" href="mailto:qazithekingston@gmail.com">Email</a>
+        <a class="pill" href="https://github.com/Qaziaaaa" target="_blank" rel="noopener">GitHub</a>
+        <a class="pill" href="https://www.linkedin.com/in/qazi-farhan-ahmad" target="_blank" rel="noopener">LinkedIn</a>
+        <a class="pill" href="https://qaziahmad.vercel.app/" target="_blank" rel="noopener">Portfolio</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="section-inner footer-inner">
+    <span>© 2026 Qazi Farhan Ahmad</span>
+    <span>Liquid reveal — a WebGL wave-equation experiment</span>
+    <a href="#hero">top ↑</a>
+  </div>
+</footer>
 
 <script src="assets/liquid.js" defer></script>
 </body>
