@@ -31,10 +31,27 @@ const reveal = new LiquidReveal('#stage', {
 window.__ripple = reveal;
 
 /* quick-start "splash it" button */
-document.querySelectorAll('[data-poke="quiet"]').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    if (reveal.paused) reveal.pause(true);
-    reveal.impulse(0.5, 0.5, 0.9);
+/* poke from the console: __ripple.impulse(.5,.5), __ripple.pause(), … */
+window.__ripple = reveal;
+
+/* copy buttons on every code block */
+document.querySelectorAll('pre.code').forEach((pre) => {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'copy';
+  btn.textContent = 'Copy';
+  btn.setAttribute('aria-label', 'Copy code to clipboard');
+  const codeText = pre.textContent.replace(/\s+$/, '').trim();
+  pre.appendChild(btn);
+  btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(codeText);
+      btn.textContent = 'Copied';
+      btn.classList.add('done');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1500);
+    } catch (e) {
+      btn.textContent = 'Failed';
+    }
   });
 });
 
