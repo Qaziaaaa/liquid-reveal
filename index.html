@@ -3,26 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Qazi Farhan Ahmad — Liquid Reveal</title>
-<meta name="description" content="An interactive WebGL liquid-reveal hero by Qazi Farhan Ahmad. A real 2D wave-equation height field runs on the GPU, refracting an image and revealing a dark-bronze layer.">
-<meta name="author" content="Qazi Farhan Ahmad">
-<meta name="theme-color" content="#000000">
-
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://github.com/Qaziaaaa/liquid-reveal">
-<meta property="og:title" content="Qazi Farhan Ahmad — Liquid Reveal">
-<meta property="og:description" content="An interactive WebGL liquid-reveal hero driven by a real 2D wave equation.">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Qazi Farhan Ahmad — Liquid Reveal">
-<meta name="twitter:description" content="An interactive WebGL liquid-reveal hero driven by a real 2D wave equation.">
-
+<title>Liquid Reveal — WebGL wave-equation image reveal library</title>
+<meta name="description" content="liquid-reveal is a zero-dependency WebGL library: a real 2D wave equation runs on the GPU and reveals one image through another. Live demo, full API guide, React/Vue recipes.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="manifest" href="manifest.webmanifest">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'">
 <style>
   :root{
     --ink:#ffffff;
     --dim:rgba(255,255,255,.62);
+    --bronze:#C98247;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth;scroll-padding-top:env(safe-area-inset-top)}
@@ -41,35 +30,11 @@
     overflow:hidden;
     background:#000;
     isolation:isolate;
-    touch-action:none;            /* let pointermove drive the effect on touch */
   }
 
-  /* ---- canvas sits at the bottom of the stack ---- */
-  #gl{
-    position:absolute; inset:0;
-    width:100%; height:100%;
-    display:block;
-    z-index:0;
-  }
+  /* the library mounts its canvas + fallback inside this element */
+  .stage{position:relative;width:100%;height:100%}
 
-  /* ---- static fallback if WebGL or the images fail ---- */
-  #fallback{
-    position:absolute; inset:0;
-    z-index:1;
-    display:none;
-    background:
-      radial-gradient(120% 90% at 50% 40%, #3A2412 0%, #120B04 46%, #000 78%),
-      #000;
-  }
-  #fallback.on{display:block}
-  #fallback::after{
-    content:"";
-    position:absolute; inset:0;
-    background:radial-gradient(58% 42% at 50% 42%, rgba(201,130,71,.28), rgba(58,36,18,.18) 45%, transparent 72%);
-    filter:blur(18px);
-  }
-
-  /* ---- hero copy ---- */
   .ui{
     position:absolute; inset:0;
     z-index:3;
@@ -87,9 +52,7 @@
     font-weight:700; letter-spacing:-.02em; line-height:1;
     text-shadow:0 2px 40px rgba(0,0,0,.75);
   }
-  .wordmark sup{font-size:.42em;vertical-align:super;font-weight:500}
-  /* Bronze accent dot, matching the chrome reveal theme. */
-  .wordmark .dot{color:#C98247}
+  .wordmark .dot{color:var(--bronze)}
 
   nav{display:flex;gap:clamp(10px,1.6vw,22px);flex-wrap:wrap;padding-top:.45em}
   nav a,.contact a{
@@ -102,34 +65,20 @@
 
   .bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
   .tagline{
-    max-width:34ch;
+    max-width:40ch;
     font-size:clamp(11px,1.05vw,13px);
-    line-height:1.45;
+    line-height:1.5;
     color:rgba(255,255,255,.86);
     text-shadow:0 1px 24px rgba(0,0,0,.8);
   }
+  .tagline code{color:var(--bronze)}
   .scroll{
     font-size:clamp(11px,1.05vw,13px);
     color:var(--dim);
     white-space:nowrap;
   }
   .scroll a{color:inherit;text-decoration:none;transition:color .25s ease}
-  .scroll a:hover{color:#C98247}
-
-  #exportBtn{
-    position:absolute;right:clamp(18px,3.2vw,44px);bottom:clamp(18px,3.2vw,44px);
-    z-index:3;
-    width:38px;height:38px;border-radius:50%;
-    border:1px solid rgba(255,255,255,.18);
-    background:rgba(0,0,0,.35);color:rgba(255,255,255,.75);
-    font-size:15px;line-height:1;cursor:pointer;
-    backdrop-filter:blur(6px);
-    transition:border-color .25s ease,color .25s ease,opacity .4s ease;
-    opacity:0;pointer-events:none;
-  }
-  #exportBtn:hover{border-color:#C98247;color:#C98247}
-  #exportBtn.ready{opacity:1;pointer-events:auto}
-  #exportBtn:active{transform:scale(.94)}
+  .scroll a:hover{color:var(--bronze)}
 
   .hint{
     position:absolute;
@@ -145,26 +94,42 @@
   .hint.gone{opacity:0}
 
   /* ---- below-hero content ---- */
-  :focus-visible{outline:1px solid #C98247;outline-offset:3px;border-radius:2px}
+  :focus-visible{outline:1px solid var(--bronze);outline-offset:3px;border-radius:2px}
 
   #content{position:relative;z-index:4;background:#000}
   .section{background:#000;border-top:1px solid rgba(255,255,255,.06)}
   .section-inner{
-    max-width:1040px;margin:0 auto;
-    padding:clamp(72px,12vh,150px) clamp(22px,5vw,64px);
+    max-width:980px;margin:0 auto;
+    padding:clamp(64px,10vh,130px) clamp(22px,5vw,64px);
   }
   .kicker{
     font-size:11px;letter-spacing:.18em;text-transform:uppercase;
-    color:#C98247;margin-bottom:18px;
+    color:var(--bronze);margin-bottom:18px;
   }
   h2{
     font-size:clamp(28px,4.6vw,52px);
     font-weight:700;letter-spacing:-.02em;line-height:1.08;
-    max-width:18ch;margin-bottom:22px;
+    max-width:22ch;margin-bottom:22px;
   }
   .section p{color:rgba(255,255,255,.78);line-height:1.65;font-size:clamp(14px,1.3vw,16px)}
-  .section .lede{color:#fff;font-size:clamp(16px,1.8vw,20px);line-height:1.55;max-width:52ch;margin-bottom:16px}
+  .section .lede{color:#fff;font-size:clamp(16px,1.8vw,20px);line-height:1.55;max-width:56ch;margin-bottom:16px}
   .section p+p{margin-top:14px}
+  .section code{color:#9dc8e6}
+  .section b{color:#fff;font-weight:600}
+  .section ul{color:rgba(255,255,255,.78);line-height:1.65;font-size:clamp(14px,1.3vw,16px)}
+
+  pre.code{
+    margin-top:28px;
+    background:#0a0c0e;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:8px;
+    padding:20px 22px;
+    overflow:auto;
+    font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;
+    color:#cfd8dc;
+  }
+  pre.code .c{color:#6b8f8f}
+  pre.code .k{color:#C98247}
 
   .specs{
     list-style:none;margin-top:44px;
@@ -176,22 +141,6 @@
   .spec-n{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.4)}
   .spec-v{font-size:13px;color:rgba(255,255,255,.9)}
 
-  .grid{
-    margin-top:44px;display:grid;gap:14px;
-    grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));
-  }
-  .card{
-    display:flex;flex-direction:column;gap:10px;
-    border:1px solid rgba(255,255,255,.1);
-    padding:24px 22px;text-decoration:none;color:#fff;
-    transition:border-color .25s ease,transform .25s ease,background .25s ease;
-  }
-  .card:hover{border-color:rgba(201,130,71,.7);transform:translateY(-3px);background:rgba(201,130,71,.05)}
-  .card-tag{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#C98247}
-  .card-title{font-size:18px;font-weight:600;letter-spacing:-.01em}
-  .card-desc{font-size:13px;line-height:1.55;color:rgba(255,255,255,.65);flex:1}
-  .card-link{font-size:12px;color:#C98247}
-
   .links{display:flex;flex-wrap:wrap;gap:12px;margin-top:36px}
   .pill{
     border:1px solid rgba(255,255,255,.18);
@@ -199,68 +148,58 @@
     font-size:13px;letter-spacing:.04em;
     transition:border-color .25s ease,background .25s ease;
   }
-  .pill:hover{border-color:#C98247;background:rgba(201,130,71,.08)}
+  .pill:hover{border-color:var(--bronze);background:rgba(201,130,71,.08)}
+  .pill.primary{border-color:var(--bronze);background:var(--bronze);color:#000}
+  .pill.primary:hover{background:#dc9a62;border-color:#dc9a62}
+
+  /* ---- reference tables ---- */
+  .ref{margin-top:34px;border:1px solid rgba(255,255,255,.1);border-radius:8px;overflow:hidden}
+  .ref h4{
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);
+    background:#0a0c0e;
+  }
+  .ref table{width:100%;border-collapse:collapse;font-size:13px}
+  .ref th,.ref td{
+    text-align:left;padding:10px 18px;vertical-align:top;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .ref th{
+    font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+    color:rgba(255,255,255,.4);font-weight:400;
+    background:#0a0c0e;
+  }
+  .ref td:first-child{color:#fff;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .ref tr:last-child td{border-bottom:none}
+  .ref td code{color:#9dc8e6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:30px}
+  @media (max-width:760px){.grid2{grid-template-columns:1fr}}
+
+  .steps{counter-reset:step;list-style:none;margin-top:30px;display:grid;gap:26px}
+  .steps li{position:relative;padding-left:52px;color:rgba(255,255,255,.78);line-height:1.6}
+  .steps li::before{
+    counter-increment:step;content:counter(step,decimal-leading-zero);
+    position:absolute;left:0;top:2px;
+    font-size:12px;letter-spacing:.1em;color:var(--bronze);
+    border:1px solid rgba(201,130,71,.4);border-radius:4px;
+    padding:3px 7px;
+  }
+  .steps b{color:#fff}
 
   footer{border-top:1px solid rgba(255,255,255,.06);background:#000}
   .footer-inner{
-    max-width:1040px;margin:0 auto;
+    max-width:1060px;margin:0 auto;
     padding:34px clamp(22px,5vw,64px);
     display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
     font-size:12px;color:rgba(255,255,255,.42);
   }
   .footer-inner a{color:rgba(255,255,255,.6);text-decoration:none}
-  .footer-inner a:hover{color:#C98247}
+  .footer-inner a:hover{color:var(--bronze)}
 
-  /* ---- scroll reveal (only when JS adds the .js class) ---- */
-  .js .section:not(.on){opacity:0;transform:translateY(16px)}
+  /* scroll reveal (only when the script adds the .js class) */
   .section{transition:opacity .6s ease,transform .6s ease}
-
-  /* ---- debug (?debug=1) ---- */
-  #dbg{
-    position:absolute; z-index:5; left:12px; bottom:12px;
-    display:none; gap:10px; align-items:flex-end;
-    font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
-    color:#9dc8e6;
-  }
-  #dbg.on{display:flex}
-  #dbgField{
-    width:200px;height:120px;
-    border:1px solid rgba(157,200,230,.45);
-    image-rendering:pixelated;
-    background:#000;
-  }
-  #dbgText{
-    background:rgba(0,0,0,.72);
-    border:1px solid rgba(157,200,230,.28);
-    padding:6px 9px;
-    white-space:pre;
-  }
-  #dbgParams{
-    background:rgba(0,0,0,.78);
-    border:1px solid rgba(157,200,230,.28);
-    padding:10px 12px;
-    width:236px;
-    max-height:340px;
-    overflow:auto;
-    display:flex;flex-direction:column;gap:6px;
-  }
-  #dbgParams .dbg-title{
-    color:#9dc8e6;letter-spacing:.12em;text-transform:uppercase;
-    font-size:10px;margin-bottom:2px;
-  }
-  #dbgParams .dbg-row{
-    display:grid;grid-template-columns:74px 1fr 42px;align-items:center;gap:8px;
-    font-size:10px;
-  }
-  #dbgParams .dbg-row span{color:rgba(255,255,255,.8)}
-  #dbgParams .dbg-row output{text-align:right;color:#9dc8e6}
-  #dbgParams input[type=range]{width:100%;accent-color:#9dc8e6;height:14px}
-  #dbgParams .dbg-btn{
-    margin-top:6px;background:transparent;border:1px solid rgba(157,200,230,.45);
-    color:#9dc8e6;font:inherit;padding:4px 8px;cursor:pointer;
-    text-transform:uppercase;letter-spacing:.1em;
-  }
-  #dbgParams .dbg-btn:hover{background:rgba(157,200,230,.12)}
+  .js .section:not(.on){opacity:0;transform:translateY(16px)}
 
   @media (prefers-reduced-motion: reduce){
     .hint{display:none}
@@ -271,97 +210,323 @@
 </head>
 <body>
 
-<section class="hero" id="hero">
-  <canvas id="gl"></canvas>
-  <div id="fallback"></div>
+<section class="hero">
+  <div id="stage" class="stage"></div>
 
   <div class="ui">
     <div class="top">
-      <div class="wordmark"><span id="wordmarkName">Qazi Farhan</span><span class="dot">.</span></div>
+      <div class="wordmark">Liquid Reveal<span class="dot">.</span></div>
       <nav>
-        <a href="#effect">The Effect</a><a href="#experiments">Experiments</a><a href="#contact">Contact</a>
+        <a href="#overview">Overview</a>
+        <a href="#effect">The Effect</a>
+        <a href="#quickstart">Quick Start</a>
+        <a href="#api">API</a>
+        <a href="#config">Config</a>
+        <a href="#recipes">Recipes</a>
+        <a href="https://www.npmjs.com/package/liquid-reveal" target="_blank" rel="noopener">npm ↗</a>
       </nav>
-      <div class="contact"><a href="https://qaziahmad.vercel.app/" target="_blank" rel="noopener">Portfolio ↗</a></div>
+      <div class="contact"><a href="https://github.com/Qaziaaaa/liquid-reveal" target="_blank" rel="noopener">GitHub ↗</a></div>
     </div>
 
     <div class="bottom">
-      <p class="tagline" id="tagline">A real 2D wave equation running on the GPU — an interactive WebGL experiment by Qazi Farhan Ahmad.</p>
-      <div class="scroll"><a href="#effect">See what I built ↓</a></div>
+      <p class="tagline">A zero-dependency WebGL package: <code>&lt;LiquidReveal /&gt;</code> renders one image through another with a real 2D wave-equation simulation on the GPU. Drag, tap, or flick.</p>
+      <div class="scroll"><a href="#overview">You're looking at a live demo ↓</a></div>
     </div>
   </div>
 
   <div class="hint" id="hint">Move your cursor</div>
-
-  <button id="exportBtn" title="Export current frame as PNG" aria-label="Export current frame as PNG">⤓</button>
-
-  <div id="dbg">
-    <canvas id="dbgField" width="200" height="120"></canvas>
-    <div id="dbgText">booting…</div>
-  </div>
 </section>
 
 <main id="content">
 
-  <section class="section" id="effect">
+  <section class="section" id="overview">
     <div class="section-inner">
-      <p class="kicker">01 — the effect</p>
-      <h2>Water you can touch, without touching it.</h2>
-      <p class="lede">The hero is a real 2D wave-equation height field, not a painted trail. Two framebuffers are ping-ponged on the GPU while a damped wave equation integrates at a fixed 120&nbsp;Hz, so ripples propagate, interfere, and keep moving long after the cursor stops.</p>
-      <p>Everything you see is derived from that height field and its gradient: the refraction, the chromatic split along the wavefront, the specular glint, and the reveal mask that wipes the photo back. FBM noise only roughens the mask edge.</p>
+      <p class="kicker">liquid-reveal — the package</p>
+      <h2>Water on the GPU. Zero dependencies.</h2>
+      <p class="lede">The hero above <em>is</em> the library running live — those are your images, `img.png` and a chrome-treated `helmet.png`, revealed by a real 2D wave equation integrated at 120&nbsp;Hz on the GPU. Nothing else on the page is animate.</p>
+      <p>Everything visible is derived from the height field and its gradient: the refraction, the chromatic split along the wavefront, the specular glint, and the mask that wipes one image over the other. FBM noise only roughens the mask edge so the reveal reads as liquid, not geometry.</p>
+      <div class="links">
+        <a class="pill primary" href="#quickstart">Get started →</a>
+        <a class="pill" href="https://www.npmjs.com/package/liquid-reveal" target="_blank" rel="noopener">npm ↗</a>
+        <a class="pill" href="https://github.com/Qaziaaaa/liquid-reveal" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
       <ul class="specs">
+        <li><span class="spec-n">Package</span><span class="spec-v">liquid-reveal@2 — zero dependencies</span></li>
+        <li><span class="spec-n">Bundle</span><span class="spec-v">ESM + CJS + minified IIFE, with types</span></li>
         <li><span class="spec-n">Renderer</span><span class="spec-v">WebGL2, WebGL1 fallback</span></li>
         <li><span class="spec-n">Sim grid</span><span class="spec-v">~288 cells on the long axis</span></li>
         <li><span class="spec-n">Sim rate</span><span class="spec-v">120 Hz fixed, accumulator-driven</span></li>
-        <li><span class="spec-n">Dependencies</span><span class="spec-v">zero — one GLSL pipeline</span></li>
         <li><span class="spec-n">Gesture</span><span class="spec-v">drag, tap to splash, multi-touch</span></li>
+        <li><span class="spec-n">Zero-config</span><span class="spec-v">bundled placeholders if you pass no images</span></li>
+        <li><span class="spec-n">Guarantee</span><span class="spec-v">graceful CSS fallback when WebGL / images fail</span></li>
       </ul>
     </div>
   </section>
 
-  <section class="section" id="experiments">
+  <section class="section" id="effect">
     <div class="section-inner">
-      <p class="kicker">02 — live experiments</p>
-      <h2>Built with the same care.</h2>
-      <p class="lede">A few other things I have in production — same obsession with the last five percent.</p>
-      <div class="grid">
-        <a class="card" href="https://mydocchat.vercel.app" target="_blank" rel="noopener">
-          <span class="card-tag">AI · MERN</span>
-          <span class="card-title">MyDocChat</span>
-          <span class="card-desc">RAG chatbot with streaming answers, powered by Groq LLaMA and Jina embeddings.</span>
-          <span class="card-link">visit ↗</span>
-        </a>
-        <a class="card" href="https://medical-ai-saas.vercel.app" target="_blank" rel="noopener">
-          <span class="card-tag">AI · SaaS</span>
-          <span class="card-title">Medical AI SaaS</span>
-          <span class="card-desc">Patient management, diagnostic assistance and analytics for clinicians.</span>
-          <span class="card-link">visit ↗</span>
-        </a>
-        <a class="card" href="https://studyflow-ai-three.vercel.app" target="_blank" rel="noopener">
-          <span class="card-tag">MERN</span>
-          <span class="card-title">StudyFlow AI</span>
-          <span class="card-desc">AI study productivity with smart scheduling and progress tracking.</span>
-          <span class="card-link">visit ↗</span>
-        </a>
-        <a class="card" href="https://aetherai-labs.vercel.app" target="_blank" rel="noopener">
-          <span class="card-tag">Next.js</span>
-          <span class="card-title">Aether AI</span>
-          <span class="card-desc">A Next.js 16 landing page with GSAP motion and celestial-modern design.</span>
-          <span class="card-link">visit ↗</span>
-        </a>
+      <p class="kicker">01 — how it works</p>
+      <h2>Water that runs on your GPU, not on magic.</h2>
+      <p class="lede">The reveal is driven by a real 2D wave-equation height field. Two framebuffers are ping-ponged on the GPU while a damped wave equation integrates at a fixed 120&nbsp;Hz — so ripples propagate, interfere, and keep moving long after the cursor stops.</p>
+      <ol class="steps">
+        <li><b>Simulation pass.</b> Solves the discrete wave equation <code>u_next = u + c²·∇²u − damping</code> on a small grid (default ~288 cells on the long axis) into a float / half-float / byte texture. Inertial properties live here: <code>damping</code>, <code>viscosity</code>, <code>edgeAbsorb</code>.</li>
+        <li><b>Noise pass.</b> Generates animated FBM noise used for organic mask edges — so the reveal boundary is never perfectly straight.</li>
+        <li><b>Composite pass.</b> Samples the wave height to compute a surface normal, then refracts + chromatic-aberrates the base image, gradient-maps the chrome image (like a LUT), and adds specular highlights, edge glow, bloom, vignette, scanlines and grain.</li>
+      </ol>
+      <p>The simulation only recomputes while there is activity. A still page costs almost nothing — the loop idles to zero until your cursor touches it.</p>
+    </div>
+  </section>
+
+  <section class="section" id="quickstart">
+    <div class="section-inner">
+      <p class="kicker">02 — quick start</p>
+      <h2>Two lines of code, one full-screen effect.</h2>
+      <p class="lede">The package mounts its own canvas, handles pointer input, idle drift, resize, and cleanup. You supply a container, two images, and their aspect ratio.</p>
+      <pre class="code"><span class="c">// 1. install</span>
+<span class="k">npm i</span> <span class="c">liquid-reveal</span>
+
+<span class="c">// 2. markup — nothing inside is needed; the library mounts itself</span>
+&lt;div id="hero" style="height:100vh"&gt;&lt;/div&gt;
+
+<span class="c">// 3. run it</span>
+<span class="k">import</span> LiquidReveal <span class="k">from</span> <span class="c">'liquid-reveal'</span>;
+
+<span class="k">const</span> reveal = <span class="k">new</span> LiquidReveal(<span class="c">'#hero'</span>, {
+  base:       <span class="c">'photo.jpg'</span>,    <span class="c">// shown initially</span>
+  chrome:     <span class="c">'chrome.png'</span>,   <span class="c">// revealed by the wave</span>
+  imgWidth:   1672,
+  imgHeight:  941,
+  focus:      [0.50, 0.44],
+  exportButton: true,     <span class="c">// ⤓ downloads the current frame</span>
+});</pre>
+      <p>No images? The bundled placeholders kick in automatically. Prefer a script tag? It also ships standalone — the page loaded above mounts the same class with no bundler.</p>
+      <button class="pill primary" data-poke="quiet">Splash it from the console →</button>
+      <pre class="code"><span class="c">// every running instance is on window.__ripple when demo is open
+</span>__ripple.impulse(0.5, 0.5, 0.9);   <span class="c">// a heavy tap in the middle</span>
+__ripple.pause();                  <span class="c">// freeze the frame</span>
+__ripple.setParams({ damping: 0.93 });</pre>
+      <div class="links">
+        <a class="pill" href="https://www.npmjs.com/package/liquid-reveal" target="_blank" rel="noopener">Read the docs on npm ↗</a>
+        <a class="pill" href="https://github.com/Qaziaaaa/liquid-reveal" target="_blank" rel="noopener">GitHub ↗</a>
       </div>
     </div>
   </section>
 
-  <section class="section" id="contact">
+  <section class="section" id="api">
     <div class="section-inner">
-      <p class="kicker">03 — contact</p>
-      <h2>Built by Qazi Farhan Ahmad.</h2>
-      <p class="lede">AI web developer and MERN stack expert from Peshawar — open to internships, freelance and full-time work.</p>
+      <p class="kicker">03 — api reference</p>
+      <h2>One class, a few methods, everything else optional.</h2>
+
+      <div class="ref">
+        <h4>Constructor — new LiquidReveal(target, options?)</h4>
+        <table>
+          <tr><th>Argument</th><th>Type</th><th>Description</th></tr>
+          <tr><td>target</td><td><code>string | HTMLElement</code></td><td>A CSS selector or element the effect mounts into.</td></tr>
+          <tr><td>options</td><td><code>Partial&lt;LiquidRevealOptions&gt;</code></td><td>Any subset of the params below, plus instance options.</td></tr>
+        </table>
+      </div>
+
+      <div class="ref">
+        <h4>Instance-only options</h4>
+        <table>
+          <tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr>
+          <tr><td>debug</td><td><code>boolean</code></td><td>false</td><td>Small overlay with fps, frame ms, energy, grid, pointers.</td></tr>
+          <tr><td>urlParams</td><td><code>boolean</code></td><td>false</td><td>Honour <code>?src=&amp;chrome=&amp;imgw=&amp;imgh=&amp;focusx=&amp;focusy=</code>.</td></tr>
+          <tr><td>exportButton</td><td><code>boolean | string</code></td><td>false</td><td><code>true</code> mounts a built-in ⤓ button; a selector mounts it on an existing element.</td></tr>
+          <tr><td>autoStart</td><td><code>boolean</code></td><td>true</td><td>Set <code>false</code> and call <code>.start()</code> yourself.</td></tr>
+        </table>
+      </div>
+
+      <div class="ref">
+        <h4>Methods</h4>
+        <table>
+          <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+          <tr><td>onReady(fn)</td><td>this</td><td>Fires once when the GL context is up and images are bound.</td></tr>
+          <tr><td>onError(fn)</td><td>this</td><td>Fires if the effect can't start; the instance's <code>errors</code> explains why.</td></tr>
+          <tr><td>start()</td><td>this</td><td>Start / restart the animation loop.</td></tr>
+          <tr><td>setImages({ base, chrome })</td><td>this</td><td>Hot-swap the base and/or chrome image after boot.</td></tr>
+          <tr><td>setParams(partial)</td><td>this</td><td>Merge any subset of the config; derived constants recompute.</td></tr>
+          <tr><td>getParams()</td><td>object</td><td>Snapshot of the current effective params.</td></tr>
+          <tr><td>impulse(x, y, amp?)</td><td>this</td><td>Drop a ripple at uv (0..1, y-up). <code>amp</code> defaults to 0.5.</td></tr>
+          <tr><td>pause(on?)</td><td>this</td><td><code>pause()</code> toggles, <code>pause(false)</code> stops, <code>pause(true)</code> resumes.</td></tr>
+          <tr><td>silence()</td><td>this</td><td>Kill idle drift and cursor input.</td></tr>
+          <tr><td>setPointer(x, y)</td><td>this</td><td>Simulate the pointer at uv.</td></tr>
+          <tr><td>exportFrame()</td><td>this</td><td>Download the current canvas frame as a PNG.</td></tr>
+          <tr><td>readHeight()</td><td>Float32Array</td><td>Raw height field, length SW×SH, row-major, y-up. See below for the analytics API.</td></tr>
+          <tr><td>destroy()</td><td>void</td><td>Remove DOM, free GL resources, unbind listeners. Call on unmount.</td></tr>
+        </table>
+      </div>
+
+      <div class="ref">
+        <h4>Getters</h4>
+        <table>
+          <tr><th>Getter</th><th>Type</th><th>Description</th></tr>
+          <tr><td>ready</td><td>boolean</td><td>Whether the animation loop is running.</td></tr>
+          <tr><td>fellBack</td><td>string | null</td><td>Reason when a static fallback panel is shown instead.</td></tr>
+          <tr><td>mode</td><td>"WebGL2" | "WebGL1"</td><td>Which renderer was chosen.</td></tr>
+          <tr><td>size</td><td>[number, number]</td><td>Backing-store canvas size in device pixels.</td></tr>
+          <tr><td>simSize</td><td>[number, number]</td><td>Simulation grid [width, height].</td></tr>
+          <tr><td>energy</td><td>number</td><td>Current peak wave amplitude.</td></tr>
+          <tr><td>fps</td><td>number</td><td>Rolling frames-per-second.</td></tr>
+          <tr><td>frameMs</td><td>number</td><td>Milliseconds spent in the last render loop.</td></tr>
+        </table>
+      </div>
+
+      <div class="ref">
+        <h4>Measurement hooks (built for data / FX tools)</h4>
+        <table>
+          <tr><th>Method</th><th>Returns</th><th>Description</th></tr>
+          <tr><td>fieldStats(cx, cy, relThresh?)</td><td>object</td><td>Peak / RMS height, radius, and area-fraction of the active wave.</td></tr>
+          <tr><td>probe(u, v)</td><td>object</td><td>Height, gradient, and refraction/chromatic pixel offsets at uv.</td></tr>
+          <tr><td>frameStats()</td><td>object | null</td><td>Median / p95 / max frame ms and dropped-frame %.</td></tr>
+          <tr><td>resetFrameStats()</td><td>this</td><td>Clear the frame-time ring buffer.</td></tr>
+          <tr><td>sampleRegion(x0,y0,x1,y1)</td><td>object</td><td>Mean / max colour of a canvas region (reads the frame back).</td></tr>
+        </table>
+      </div>
+
+      <p style="margin-top:24px">There are no DOM events. Use the promise-style <code>onReady</code> / <code>onError</code> hooks — both re-fire immediately if the state already happened.</p>
+    </div>
+  </section>
+
+  <section class="section" id="config">
+    <div class="section-inner">
+      <p class="kicker">04 — configuration</p>
+      <h2>Every tunable, grouped by what it drives.</h2>
+      <div class="grid2">
+
+        <div class="ref">
+          <h4>Wave simulation (the effect)</h4>
+          <table>
+            <tr><th>Key</th><th>What it controls</th></tr>
+            <tr><td>waveC</td><td>Courant number. CFL limit for this stencil is 0.707 — don't exceed it.</td></tr>
+            <tr><td>damping</td><td>Per-step decay. Lower = ripples die faster.</td></tr>
+            <tr><td>viscosity</td><td>Diffusion term. Must stay under 0.25.</td></tr>
+            <tr><td>edgeAbsorb / edgeCells</td><td>Absorbing layer that stops waves bouncing off the frame.</td></tr>
+            <tr><td>simLong / simHz / simMaxSteps</td><td>Grid resolution, fixed sim rate, catch-up cap.</td></tr>
+            <tr><td>hClamp</td><td>Safety clamp on height.</td></tr>
+          </table>
+        </div>
+
+        <div class="ref">
+          <h4>Cursor impulse</h4>
+          <table>
+            <tr><th>Key</th><th>What it controls</th></tr>
+            <tr><td>impulseBase / Gain / Max</td><td>How strongly the liquid reacts to the pointer.</td></tr>
+            <tr><td>impulseMinSpeed</td><td>Jitter dead-zone so tiny twitches don't splash.</td></tr>
+            <tr><td>impulseRadius / FallSq</td><td>Size and falloff of the pressure bump.</td></tr>
+            <tr><td>splashAmp</td><td>Tap-to-splash strength.</td></tr>
+          </table>
+        </div>
+
+        <div class="ref">
+          <h4>Visuals</h4>
+          <table>
+            <tr><th>Key</th><th>What it controls</th></tr>
+            <tr><td>refraction / refractMax</td><td>Strength and cap of the lensing.</td></tr>
+            <tr><td>chromatic / chromaMax</td><td>Colour fringing along the wavefront.</td></tr>
+            <tr><td>normalScale / specStrength / shininess</td><td>The specular glint on the surface.</td></tr>
+            <tr><td>lightDir / specTint</td><td>Light direction and glint colour.</td></tr>
+            <tr><td>bloom / vignette / scanlines / grain</td><td>Atmosphere.</td></tr>
+          </table>
+        </div>
+
+        <div class="ref">
+          <h4>Mask, gradient map, idle</h4>
+          <table>
+            <tr><th>Key</th><th>What it controls</th></tr>
+            <tr><td>maskHeight / maskGrad / Lo / Hi</td><td>Height threshold that wipes chrome over base.</td></tr>
+            <tr><td>maskNoise / noiseTile</td><td>How organic the mask edge is.</td></tr>
+            <tr><td>gradStops / gradWrap / gradScale / gradMix</td><td>The chrome LUT: stops, wrap mode, scale, blend.</td></tr>
+            <tr><td>lumLo / lumHi / lumGamma</td><td>Luminance remap before the LUT.</td></tr>
+            <tr><td>idleDrift / idleDelayMs / idleSpeed</td><td>Auto-ripples when the page sits still.</td></tr>
+            <tr><td>dprCap / dprCapMobile</td><td>Max devicePixelRatio for the backing store.</td></tr>
+          </table>
+        </div>
+
+      </div>
+      <p class="lede" style="margin-top:30px">A working dial-in example — copy into the console of this page:</p>
+      <pre class="code">__ripple.setParams({
+  damping:     0.96,       <span class="c">// longer-lasting ripples</span>
+  refraction:  0.18,       <span class="c">// stronger lensing</span>
+  chromatic:   0.05,       <span class="c">// more colour fringing</span>
+  bloom:       0.4,
+  gradStops: [
+    { t: 0.0, c: '#05070c' },
+    { t: 0.6, c: '#1e3a5f' },
+    { t: 1.0, c: '#7ec8ff' },
+  ],
+});</pre>
+    </div>
+  </section>
+
+  <section class="section" id="recipes">
+    <div class="section-inner">
+      <p class="kicker">05 — recipes</p>
+      <h2>Framework bindings are three lines each.</h2>
+      <p class="lede">Because the instance owns its DOM, you just mount it on a ref and call <code>destroy()</code> on unmount. Strict-mode safe.</p>
+
+      <div class="ref"><h4>React</h4><pre class="code" style="margin-top:0;border:none;border-radius:0"><span class="c">// Hero.tsx</span>
+import { useEffect, useRef } from "react";
+import LiquidReveal from "liquid-reveal";
+
+export function Hero(){
+  const ref = useRef&lt;HTMLDivElement&gt;(null);
+  useEffect(() => {
+    const reveal = new LiquidReveal(ref.current!, {
+      base: "/img/base.jpg", chrome: "/img/chrome.png",
+      imgWidth: 4000, imgHeight: 2250,
+    });
+    return () => reveal.destroy();   <span class="c">// strict-mode / unmount safe</span>
+  }, []);
+  return &lt;div ref={ref} style={{position:"relative",width:"100%",height:"60vh"}} /&gt;;
+}</pre></div>
+
+      <div class="ref"><h4>Vue</h4><pre class="code" style="margin-top:0;border:none;border-radius:0"><span class="c">&lt;!-- Hero.vue --&gt;</span>
+&lt;script setup&gt;
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import LiquidReveal from "liquid-reveal";
+const el = ref(null);
+let reveal;
+onMounted(() => {
+  reveal = new LiquidReveal(el.value, { base: "a.jpg", chrome: "b.png", imgWidth: 1672, imgHeight: 941 });
+});
+onBeforeUnmount(() => reveal?.destroy());
+&lt;/script&gt;
+&lt;template&gt;&lt;div ref="el" style="position:relative;width:100%;height:60vh" /&gt;&lt;/template&gt;</pre></div>
+
+      <div class="ref"><h4>Svelte</h4><pre class="code" style="margin-top:0;border:none;border-radius:0"><span class="c">&lt;!-- Hero.svelte --&gt;</span>
+&lt;script&gt;
+  import { onMount } from "svelte";
+  import LiquidReveal from "liquid-reveal";
+  let el, reveal;
+  onMount(() => {
+    reveal = new LiquidReveal(el, { base: "a.jpg", chrome: "b.png" });
+    return () => reveal.destroy();
+  });
+&lt;/script&gt;
+&lt;div bind:this={el} style="position:relative;width:100%;height:60vh" /&gt;</pre></div>
+    </div>
+  </section>
+
+  <section class="section" id="browsers">
+    <div class="section-inner">
+      <p class="kicker">06 — support &amp; troubleshooting</p>
+      <h2>Falls back, never fails.</h2>
+      <p class="lede">WebGL1 + <code>OES_texture_half_float</code>, or WebGL2 + float colour buffers, on anything modern: Chrome, Edge, Firefox, Safari (macOS &amp; iOS). If WebGL is missing or the user prefers reduced motion, a static CSS fallback panel is shown instead of a broken canvas.</p>
+      <div class="ref">
+        <h4>FAQ</h4>
+        <table>
+          <tr><th>Problem</th><th>Fix</th></tr>
+          <tr><td>Blank / invisible effect</td><td>WebGL can't feed textures from <code>file://</code>. Serve over HTTP (any static server).</td></tr>
+          <tr><td>Fallback panel shows</td><td>Read <code>reveal.fellBack</code> and <code>reveal.errors</code> — no GL, 404'd images, or reduced-motion.</td></tr>
+          <tr><td>Ripples explode</td><td><code>waveC</code> exceeded the CFL limit (0.707). Lower it.</td></tr>
+          <tr><td>Image cropped oddly</td><td>Set <code>imgWidth</code>/<code>imgHeight</code> to the real intrinsic size; tune <code>focus</code>.</td></tr>
+          <tr><td>Leaking memory in a SPA</td><td>Call <code>destroy()</code> whenever the container unmounts.</td></tr>
+        </table>
+      </div>
       <div class="links">
-        <a class="pill" href="mailto:qazithekingston@gmail.com">Email</a>
-        <a class="pill" href="https://github.com/Qaziaaaa" target="_blank" rel="noopener">GitHub</a>
-        <a class="pill" href="https://www.linkedin.com/in/qazi-farhan-ahmad" target="_blank" rel="noopener">LinkedIn</a>
-        <a class="pill" href="https://qaziahmad.vercel.app/" target="_blank" rel="noopener">Portfolio</a>
+        <a class="pill" href="https://www.npmjs.com/package/liquid-reveal" target="_blank" rel="noopener">npm — liquid-reveal ↗</a>
+        <a class="pill" href="https://github.com/Qaziaaaa/liquid-reveal/issues" target="_blank" rel="noopener">Report an issue ↗</a>
       </div>
     </div>
   </section>
@@ -370,12 +535,11 @@
 
 <footer>
   <div class="section-inner footer-inner">
-    <span>© 2026 Qazi Farhan Ahmad</span>
-    <span>Liquid reveal — a WebGL wave-equation experiment</span>
-    <a href="#hero">top ↑</a>
+    <span>Liquid Reveal — a WebGL wave-equation library. MIT © Qazi Farhan Ahmad</span>
+    <a href="#overview">top ↑</a>
   </div>
 </footer>
 
-<script src="assets/liquid.js" defer></script>
+<script src="assets/demo-main.js" type="module"></script>
 </body>
 </html>

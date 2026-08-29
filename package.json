@@ -1,0 +1,64 @@
+{
+  "name": "liquid-reveal",
+  "version": "2.0.0",
+  "description": "Zero-dependency WebGL liquid-reveal effect. A real 2D wave-equation height field runs on the GPU and reveals one image through another — drag, tap, multitouch.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "types",
+    "assets/base-placeholder.png",
+    "assets/chrome-placeholder.png",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node server.mjs",
+    "demo": "node server.mjs",
+    "build": "node build.mjs",
+    "prepack": "npm run build",
+    "test": "node test/smoke.test.mjs && node test/pipeline.test.mjs",
+    "pack:preview": "npm run build && npm pack --dry-run"
+  },
+  "keywords": [
+    "webgl",
+    "shader",
+    "wave-equation",
+    "liquid",
+    "reveal",
+    "hero",
+    "ripple",
+    "water",
+    "opengl",
+    "gpu",
+    "zero-dependency",
+    "animation",
+    "interactive"
+  ],
+  "author": "Qazi Farhan Ahmad (https://github.com/Qaziaaaa)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Qaziaaaa/liquid-reveal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Qaziaaaa/liquid-reveal/issues"
+  },
+  "homepage": "https://github.com/Qaziaaaa/liquid-reveal",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.11"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
