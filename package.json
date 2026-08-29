@@ -53,7 +53,7 @@
   "bugs": {
     "url": "https://github.com/Qaziaaaa/liquid-reveal/issues"
   },
-  "homepage": "https://github.com/Qaziaaaa/liquid-reveal",
+  "homepage": "https://liquid-reveal.vercel.app",
   "sideEffects": false,
   "engines": {
     "node": ">=20.11"

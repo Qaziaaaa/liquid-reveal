@@ -1,6 +1,13 @@
 # liquid-reveal
 
+[![npm](https://img.shields.io/npm/v/liquid-reveal?color=C98247&label=npm)](https://www.npmjs.com/package/liquid-reveal)
+[![downloads](https://img.shields.io/npm/dm/liquid-reveal?color=C98247&label=downloads)](https://www.npmjs.com/package/liquid-reveal)
+[![license](https://img.shields.io/badge/license-MIT-C98247)](LICENSE)
+[![live demo](https://img.shields.io/badge/live-demo-000000?labelColor=000&color=fff&style=flat)](https://liquid-reveal.vercel.app)
+
 **Zero-dependency WebGL liquid-reveal effect.** A real 2D wave-equation height field runs on the GPU, and the liquid it creates reveals one image through another — refraction, chromatic aberration, specular highlights, and a gradient-mapped chrome treatment are all derived from that single simulation. Drag, tap (splash), or just let it drift. **~60 kB ESM (gzip ≈ 15 kB), no build step, no dependencies.**
+
+> Live demo: **https://liquid-reveal.vercel.app** — move your cursor over the hero.
 
 ```js
 import LiquidReveal from "liquid-reveal";
